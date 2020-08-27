@@ -15,11 +15,14 @@ internal class Chat
     // Declare these variables outside the Main method so other methods can use them too
     private static string chatName;
     private static IConnection connection;
+    private static string randUserId;
 
     public static void Main()
     {
         Console.Clear();
         Console.Title = "Chat App Test";
+
+        randUserId = new Random().Next(0, 9999999).ToString();
 
         // Set server settings here, comment out settings that aren't needed
         ConnectionFactory factory = new ConnectionFactory()
@@ -108,6 +111,9 @@ internal class Chat
 
         Console.WriteLine("You can start chatting! Type 'exit' to stop chatting.\n");
 
+        var properties = channelSend.CreateBasicProperties();
+        properties.UserId = randUserId;
+
         while (true)
         {
             Console.Write(chatName + ": ");
@@ -125,11 +131,11 @@ internal class Chat
             string formattedMsg = FormatMessage(message);
 
             // Send message to the exchange without specifying a queue (fanout exchange sends it to all 
-            // queues)
+            // queues.
             byte[] body = Encoding.UTF8.GetBytes(formattedMsg);
             channelSend.BasicPublish(exchange: exchangeName,
                                     routingKey: "",
-                                    basicProperties: null,
+                                    basicProperties: properties,
                                     body: body);
 
             // Write the sent message over the console input to prevent double messages from appearing
@@ -166,10 +172,8 @@ internal class Chat
 
             // Messages sent by the user are received by the user too, so filter out those 
             // messages before writing them to the console to prevent double messages from appearing
-            string msgUsername = message.Split(" ")[1];
-            string username = msgUsername.Substring(0, msgUsername.Length - 1);
 
-            if (username != chatName)
+            if (ea.BasicProperties.UserId != randUserId)
             {
                 Console.WriteLine("\r" + message);
                 Console.Write(chatName + ": ");
